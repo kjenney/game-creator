@@ -1,0 +1,25 @@
+{
+  "name": "Tower Defense",
+  "version": "0.1.0",
+  "slots": [
+    {
+      "id": "game.title",
+      "label": "Game title",
+      "kind": "text"
+    },
+    {
+      "id": "game.commander",
+      "label": "Commander name",
+      "kind": "text"
+    }
+  ],
+  "bundleFiles": [
+    "index.html",
+    "js/vendor/babylon.js",
+    "js/gc-contract.js",
+    "js/generated-options.js",
+    "js/generated-assets.js",
+    "js/assets.js",
+    "js/game.js"
+  ]
+}

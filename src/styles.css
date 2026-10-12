@@ -1,0 +1,73 @@
+/* Creator app styles — the creator always runs over http(s), so modern CSS is fine (D9). */
+:root {
+  --bg: #10141a;
+  --panel: #181e27;
+  --panel-border: #2a3340;
+  --text: #e8ecf1;
+  --muted: #9aa5b1;
+  --accent: #e8a33d;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+#app { max-width: 640px; margin: 0 auto; padding: 32px 20px 64px; }
+header h1 { font-size: 28px; margin: 0 0 4px; }
+.tagline { color: var(--muted); margin: 0 0 28px; }
+h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+section { margin-bottom: 32px; }
+
+.template-list { display: grid; gap: 10px; }
+.template-card {
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 14px 16px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.template-card:hover { border-color: var(--accent); }
+.template-card.active { border-color: var(--accent); background: #1e2530; }
+.template-name::before { content: "▸ "; color: var(--accent); }
+
+.slot {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.slot-label { display: block; font-weight: 600; margin-bottom: 8px; }
+.slot input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #0d1117;
+  color: var(--text);
+  font-size: 15px;
+}
+.slot input[type="color"] { padding: 2px; height: 40px; }
+.slot-requirements, .slot-hint { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+
+#export-btn {
+  background: var(--accent);
+  color: #1a1205;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#export-btn:disabled { opacity: 0.5; cursor: default; }
+#export-status { margin: 10px 0 0; font-size: 14px; min-height: 1.2em; }
+.status-ok { color: #7fd6a2; }
+.status-error { color: #ff9d94; }
