@@ -1,0 +1,22 @@
+{
+  "name": "game-creator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turn a game Template plus your Options into a self-contained, playable web game.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test tests/",
+    "vendor": "node scripts/build-vendor.mjs"
+  },
+  "dependencies": {
+    "jszip": "3.10.2"
+  },
+  "devDependencies": {
+    "vite": "8.3.4",
+    "esbuild": "0.28.2",
+    "@babylonjs/core": "9.30.0",
+    "@babylonjs/loaders": "9.30.0",
+    "@babylonjs/serializers": "9.30.0"
+  }
+}
