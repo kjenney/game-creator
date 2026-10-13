@@ -50,9 +50,10 @@
   var accentMat = new BABYLON.StandardMaterial("accentMat", scene);
   accentMat.diffuseColor = new BABYLON.Color3(0.91, 0.64, 0.24);
   base.material = accentMat;
-  barrel.material = new BABYLON.StandardMaterial("barrelMat", scene);
+  var barrelMat = new BABYLON.StandardMaterial("barrelMat", scene);
   barrelMat.diffuseColor = new BABYLON.Color3(0.8, 0.82, 0.85);
   barrelMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+  barrel.material = barrelMat;
 
   engine.runRenderLoop(function () {
     barrel.rotation.y += 0.02; // idle spin so the scene is visibly alive

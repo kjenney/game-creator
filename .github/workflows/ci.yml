@@ -1,0 +1,64 @@
+# CI — game-creator (ADR 0004): three independent checks on every PR and on
+# main: the Node export-seam suite, the creator build (+ committed vendor
+# drift), and the browser stage that runs an exported Generated game in
+# headless Chromium (the spec's manual smoke test, automated) end-to-end.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Creator build
+        run: npm run build
+      - name: Vendor drift check (committed babylon.js must match package.json)
+        run: |
+          npm run vendor
+          git diff --exit-code -- public/templates/tower-defense/bundle/js/vendor/babylon.js
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium (SwiftShader WebGL)
+        run: npx playwright install --with-deps chromium
+      - name: Build creator app (served by vite preview)
+        run: npm run build
+      - name: Browser validation (smoke test + creator end-to-end)
+        run: npx playwright test
+      - name: Exported game (zip from the end-to-end run)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: exported-game
+          path: artifacts/
+          if-no-files-found: warn

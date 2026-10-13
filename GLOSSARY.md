@@ -15,3 +15,7 @@ _Avoid_: Setting, knob
 **Generated game**:
 A concrete, playable instance of a Template, produced by applying a set of **Option** values. It is what the user actually plays in the browser.
 _Avoid_: Custom game, build, run, session
+
+**Smoke test**:
+A run of an exported Generated game — the bundle opened directly in a browser, no server — verifying that the game runs and displays the user's Options.
+_Avoid_: E2E test, integration test

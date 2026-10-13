@@ -7,16 +7,22 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test tests/",
+    "e2e": "playwright test",
+    "preview": "vite preview",
     "vendor": "node scripts/build-vendor.mjs"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "dependencies": {
     "jszip": "3.10.2"
   },
   "devDependencies": {
-    "vite": "8.3.4",
-    "esbuild": "0.28.2",
     "@babylonjs/core": "9.30.0",
     "@babylonjs/loaders": "9.30.0",
-    "@babylonjs/serializers": "9.30.0"
+    "@babylonjs/serializers": "9.30.0",
+    "@playwright/test": "^1.64.0",
+    "esbuild": "0.28.2",
+    "vite": "8.3.4"
   }
 }
