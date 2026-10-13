@@ -5,3 +5,7 @@ A Web app that alows users to generate games from templates. There are pre-defin
 ## Architecture
 
 The game templates use Babylon.js which creates a web app to host the game.
+
+## Spec
+
+The Spec has been saved to a Github issue: https://github.com/kjenney/game-creator/issues/1
