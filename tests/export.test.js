@@ -29,7 +29,22 @@ test("exported bundle has the required structure (index.html + js/ + assets layo
     "js/generated-options.js",
     "js/generated-assets.js",
     "js/assets.js",
+    "js/td-core.js",
+    "js/td-audio.js",
     "js/game.js",
+  ]) {
+    assert.ok(out.files[p], "bundle missing " + p);
+  }
+  // default art ships in the export (T4: default art for towers/enemies/base/bg/ground)
+  for (const p of [
+    "assets/models/tower_arrow.glb",
+    "assets/models/tower_cannon.glb",
+    "assets/models/tower_frost.glb",
+    "assets/models/enemy_grunt.glb",
+    "assets/models/enemy_brute.glb",
+    "assets/models/base_castle.glb",
+    "assets/textures/ground.png",
+    "assets/textures/skybox.png",
   ]) {
     assert.ok(out.files[p], "bundle missing " + p);
   }
@@ -41,6 +56,8 @@ test("exported bundle has the required structure (index.html + js/ + assets layo
     "js/generated-options.js",
     "js/generated-assets.js",
     "js/assets.js",
+    "js/td-core.js",
+    "js/td-audio.js",
     "js/game.js",
   ];
   // script tags are present, in the NOTES §3 order
@@ -53,10 +70,27 @@ test("exported bundle has the required structure (index.html + js/ + assets layo
   }
 });
 
-test("unspecified Options keep their defaults (empty GC_OPTIONS, game falls back)", () => {
+test("default art + audio are embedded in GC_ASSETS (game loads them by bytes, never URL)", () => {
+  const out = GameGC.buildBundle(loadTemplate(), { options: {}, assets: {} });
+  const embedded = gcAssets(out);
+  for (const p of [
+    "assets/models/tower_cannon.glb",
+    "assets/models/enemy_brute.glb",
+    "assets/models/base_castle.glb",
+    "assets/textures/ground.png",
+    "assets/textures/skybox.png",
+    "assets/audio/win.wav",
+  ]) {
+    assert.ok(typeof embedded[p] === "string" && embedded[p].length > 0, "GC_ASSETS missing " + p);
+  }
+});
+
+test("unspecified Options keep their defaults (empty GC_OPTIONS; Template art embedded)", () => {
   const out = GameGC.buildBundle(loadTemplate(), {});
   assert.deepEqual(gcOptions(out), {});
-  assert.deepEqual(gcAssets(out), {}); // T1 manifest has no binary slots
+  // T4: the Template's default art + audio ride along so the game plays with defaults
+  const embedded = gcAssets(out);
+  assert.ok(Object.keys(embedded).length >= 18, "default assets embedded in GC_ASSETS");
 });
 
 test("invalid text Option rejected with slot id + reason (ValidationError)", () => {

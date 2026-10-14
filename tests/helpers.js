@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const BINARY_EXT = new Set([".glb", ".png", ".jpg", ".jpeg", ".webp", ".mp3", ".ogg"]);
+const BINARY_EXT = new Set([".glb", ".png", ".jpg", ".jpeg", ".webp", ".mp3", ".ogg", ".wav"]);
 
 export function loadTemplate(name = "tower-defense") {
   const dir = path.join("public", "templates", name);
@@ -14,5 +14,5 @@ export function loadTemplate(name = "tower-defense") {
     const ext = path.extname(rel).toLowerCase();
     files[rel] = BINARY_EXT.has(ext) ? new Uint8Array(bytes) : bytes.toString("utf8");
   }
-  return { manifest: manifest.slots, files };
+  return { manifest: manifest.slots, defaultAssets: manifest.defaultAssets || [], files };
 }

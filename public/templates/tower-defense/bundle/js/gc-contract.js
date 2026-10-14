@@ -101,7 +101,7 @@
   }
 
   // ---- THE pure export transform (the automated seam, D8) ----
-  // template: { manifest: OptionSlot[], files: { [relPath]: string | Uint8Array } }
+  // template: { manifest: OptionSlot[], defaultAssets?: string[], files: { [relPath]: string | Uint8Array } }
   //   options: { [slotId]: string | null }   text/color values; null/absent = keep default
   //   assets:  { [slotId]: Uint8Array }      uploaded binary assets (already File.arrayBuffer()ed)
   // -> { files: { [relPath]: string | Uint8Array } }   complete export bundle
@@ -132,8 +132,13 @@
       gcAssets[slot.assetPath] = toBase64(assets[slotId]);
     });
 
-    // 3. EVERY model3d + texture default asset also embedded (file:// rule D4):
-    //    the game loads ALL binary assets from GC_ASSETS, never by URL.
+    // 3. EVERY default binary asset also embedded (file:// rule D4): the game
+    //    loads ALL binary assets from GC_ASSETS, never by URL. Two sources:
+    //    the Template's declared defaultAssets (T4 default art/audio, not yet
+    //    Option slots) and each binary slot's default file at slot.assetPath.
+    (template.defaultAssets || []).forEach(function (p) {
+      if (typeof template.files[p] === "object" && !gcAssets[p]) gcAssets[p] = toBase64(template.files[p]);
+    });
     template.manifest.forEach(function (slot) {
       if (BINARY_KINDS.indexOf(slot.kind) >= 0 && template.files[slot.assetPath] && !gcAssets[slot.assetPath])
         gcAssets[slot.assetPath] = toBase64(template.files[slot.assetPath]);

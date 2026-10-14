@@ -11,13 +11,19 @@
     return GameGC.fromBase64(b64);
   }
   function loadModel(path) {
-    // v9: LoadAssetContainerAsync(source, scene); source may be bytes (D4)
-    return BABYLON.SceneLoader.LoadAssetContainerAsync(assetBytes(path), scene);
+    // v9: the glTF plugin's directLoad accepts a data: URL whose payload
+    // starts with the GLB magic — it base64-decodes and parses the binary
+    // inline (no fetch, D4-satisfied). The raw-ArrayBuffer path needs a
+    // pluginExtension lookup that resolves to the wrong plugin in this
+    // bundle, so we go through the URL form.
+    var b64 = GameGC.toBase64(assetBytes(path));
+    var url = "data:model/gltf-binary;base64," + b64;
+    return BABYLON.LoadAssetContainerAsync(url, scene);
   }
   function loadTexture(path) {
-    // v9 createTexture accepts a buffer; if a raw Uint8Array is rejected at runtime,
-    // wrap with new BABYLON.Buffer(bytes) (NOTES open question 3 — one-line fix).
-    return new BABYLON.Texture(assetBytes(path), scene);
+    // v9: the `url` param must stay a string (_createTextureBase calls
+    // .substring on it); the bytes go in the `buffer` param (8th positional).
+    return new BABYLON.Texture(null, scene, false, false, 0, null, null, assetBytes(path));
   }
   // v9 AssetContainer has NO getNodeByName — walk the tree (NOTES T2.4)
   function findNode(container, name) {
