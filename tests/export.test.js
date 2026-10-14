@@ -255,3 +255,93 @@ test("image2d uploads are validated and placed at the slot assetPath (shared con
     (e) => e.name === "ValidationError" && e.slotId === "ui.icon" && /unsupported image format/.test(e.message),
   );
 });
+
+// ---- T5 (issue #6): the full customization surface (all 11 Option slots) ----
+// The prior issues built each kind (#3 model, #4 color/texture, #5 TD game);
+// this wires the whole surface together: every slot at once, in one bundle.
+
+const FULL_MODEL_SLOTS = [
+  "tower.arrow.model",
+  "tower.cannon.model",
+  "tower.frost.model",
+  "enemy.grunt.model",
+  "enemy.brute.model",
+  "base.castle.model",
+];
+
+test("the TD manifest declares the full 11-slot surface (2 text, 6 model, 2 texture, 1 color)", () => {
+  const template = loadTemplate();
+  assert.equal(template.manifest.length, 11, "11 Option slots in total");
+
+  const byKind = (k) => template.manifest.filter((s) => s.kind === k);
+  assert.equal(byKind("text").length, 2, "2 text slots");
+  assert.equal(byKind("model3d").length, 6, "6 model slots (3 tower, 2 enemy, 1 base)");
+  assert.equal(byKind("texture").length, 2, "2 texture slots (skybox, ground)");
+  assert.equal(byKind("color").length, 1, "1 color slot (accent)");
+
+  // every model slot carries its own per-slot requirements + a model asset path
+  byKind("model3d").forEach((s) => {
+    assert.ok(s.requirements && s.requirements.format === "glb" && s.requirements.maxBytes > 0,
+      s.id + " declares glb requirements (format + maxBytes)");
+    assert.ok(s.assetPath && s.assetPath.startsWith("assets/models/"), s.id + " maps to a model asset path");
+  });
+});
+
+test("full customization: all 11 Option values + assets produce a correct, self-contained bundle", () => {
+  const template = loadTemplate();
+  const tower = new Uint8Array(fs.readFileSync("tests/fixtures/glb/valid-tower.glb"));
+  const tex = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+
+  // set every slot: 2 text + 1 color as values, all 6 models + 2 textures as uploads
+  const options = {
+    "game.title": "Ken's Full Game",
+    "game.commander": "Ken",
+    "theme.accent": "#0b66ff",
+  };
+  const assets = {};
+  for (const s of template.manifest) {
+    if (s.kind === "model3d") assets[s.id] = tower;
+    else if (s.kind === "texture") assets[s.id] = tex;
+  }
+
+  const out = GameGC.buildBundle(template, { options, assets });
+
+  // all text + color injected exactly where the game reads them (GC_OPTIONS)
+  const gcOpts = gcOptions(out);
+  assert.equal(gcOpts["game.title"], "Ken's Full Game");
+  assert.equal(gcOpts["game.commander"], "Ken");
+  assert.equal(gcOpts["theme.accent"], "#0b66ff");
+  assert.equal(Object.keys(gcOpts).length, 3, "exactly the value Options — no binary kinds leaked in");
+
+  // every model placed at its own assetPath with the upload bytes (not the default's),
+  // and embedded in GC_ASSETS (file:// rule D4) so the game loads it by bytes
+  const gcAs = gcAssets(out);
+  for (const s of template.manifest.filter((x) => x.kind === "model3d")) {
+    assert.deepEqual(out.files[s.assetPath], tower, s.id + " placed with the upload bytes");
+    assert.notDeepEqual(out.files[s.assetPath], template.files[s.assetPath], s.id + " differs from the default model");
+    assert.equal(gcAs[s.assetPath], GameGC.toBase64(tower), s.id + " embedded in GC_ASSETS");
+  }
+  // both textures placed + embedded
+  for (const s of template.manifest.filter((x) => x.kind === "texture")) {
+    assert.deepEqual(out.files[s.assetPath], tex, s.id + " placed with the upload bytes");
+    assert.equal(gcAs[s.assetPath], GameGC.toBase64(tex), s.id + " embedded in GC_ASSETS");
+  }
+
+  // the bundle is still self-contained and file://-safe
+  const html = text(out.files["index.html"]);
+  assert.ok(html.includes("js/generated-options.js") && html.includes("js/generated-assets.js"),
+    "index.html loads the generated options + assets");
+  assert.ok(!html.includes('type="module"'), "no ES modules (file:// rule)");
+});
+
+test("each of the 6 model slots rejects an invalid GLB with its own slot id + specific reason", () => {
+  const template = loadTemplate();
+  const bad = new Uint8Array(fs.readFileSync("tests/fixtures/glb/bad.txt"));
+  for (const id of FULL_MODEL_SLOTS) {
+    assert.throws(
+      () => GameGC.buildBundle(template, { options: {}, assets: { [id]: bad } }),
+      (e) => e.name === "ValidationError" && e.slotId === id && /not a GLB/.test(e.message),
+      id + " rejects a non-GLB upload with its own slot id",
+    );
+  }
+});
