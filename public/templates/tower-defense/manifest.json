@@ -89,6 +89,32 @@
         "maxBytes": 2097152
       },
       "assetPath": "assets/models/base_castle.glb"
+    },
+    {
+      "id": "skybox.texture",
+      "label": "Skybox / background",
+      "kind": "texture",
+      "requirements": {
+        "format": "png, jpg, webp",
+        "maxBytes": 8388608
+      },
+      "assetPath": "assets/textures/skybox.png"
+    },
+    {
+      "id": "ground.texture",
+      "label": "Ground texture",
+      "kind": "texture",
+      "requirements": {
+        "format": "png, jpg, webp",
+        "maxBytes": 8388608
+      },
+      "assetPath": "assets/textures/ground.png"
+    },
+    {
+      "id": "theme.accent",
+      "label": "Accent / UI color",
+      "kind": "color",
+      "default": "#e8a33d"
     }
   ],
   "defaultAssets": [

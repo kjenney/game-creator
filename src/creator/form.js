@@ -2,9 +2,8 @@
 // (data-driven, never hardcoded — spec US4). One <div class="slot" data-slot=id>
 // per declared slot; collector.js reads values back by data-slot.
 //
-// Per-kind renderers: T1 ships text; color/model3d/texture renderers are the
-// clean plug-in points T2/T3 build on (file input + requirements line already
-// structured here — T2/T3 refine validation UX, not the DOM contract).
+// Per-kind renderers: text (input), color (picker, default from the manifest),
+// texture/image2d/model3d (file input + that slot's requirements line).
 
 function requirementsText(slot) {
   const r = slot.requirements;
@@ -29,7 +28,7 @@ function renderText(slot) {
 function renderColor(slot) {
   const input = document.createElement("input");
   input.type = "color";
-  input.value = "#e8a33d"; // fallback; T3 wires the default from the template
+  input.value = slot.default || "#e8a33d"; // the Template's own accent (manifest `default`)
   return { field: input, isAsset: false };
 }
 

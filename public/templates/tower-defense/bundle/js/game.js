@@ -21,6 +21,10 @@
     var cmdEl = document.getElementById("gc-commander");
     if (cmdEl) cmdEl.textContent = "Commander: " + commander;
   }
+  // accent color (content only, ADR 0001): the UI reads --gc-accent (index.html
+  // CSS) — the export validated it (#rrggbb/aa) before it got here
+  var accent = options["theme.accent"];
+  if (accent) document.documentElement.style.setProperty("--gc-accent", accent);
 
   function $(id) { return document.getElementById(id); }
 

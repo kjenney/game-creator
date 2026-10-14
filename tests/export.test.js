@@ -163,3 +163,95 @@ test("an upload failing each model requirement is rejected with the specific rea
     );
   }
 });
+
+// ---- T3 (issue #4): color + texture/2D-image Options through the export seam ----
+
+const slotById = (template, id) => template.manifest.filter((s) => s.id === id)[0];
+
+test("the TD manifest declares the accent color and skybox/ground texture slots", () => {
+  const template = loadTemplate();
+  const accent = slotById(template, "theme.accent");
+  assert.ok(accent && accent.kind === "color", "manifest declares a color accent slot");
+
+  for (const [id, assetPath] of [
+    ["skybox.texture", "assets/textures/skybox.png"],
+    ["ground.texture", "assets/textures/ground.png"],
+  ]) {
+    const slot = slotById(template, id);
+    assert.ok(slot && slot.kind === "texture", "manifest declares texture slot " + id);
+    assert.equal(slot.assetPath, assetPath, "slot " + id + " maps to its expected asset path");
+    assert.ok(slot.requirements && slot.requirements.maxBytes > 0, "texture slot declares a maxBytes requirement");
+  }
+});
+
+test("accent color is injected where the game reads it (GC_OPTIONS)", () => {
+  const out = GameGC.buildBundle(loadTemplate(), { options: { "theme.accent": "#12ab34" }, assets: {} });
+  assert.match(text(out.files["js/generated-options.js"]), /"theme\.accent":\s*"#12ab34"/);
+  assert.equal(gcOptions(out)["theme.accent"], "#12ab34");
+  // the game applies it to the UI (index.html's --gc-accent, read in game.js)
+  const game = text(out.files["js/game.js"]);
+  assert.ok(game.includes('"theme.accent"') && game.includes("--gc-accent"), "game.js reads the accent and sets --gc-accent");
+});
+
+test("an invalid accent color is rejected with the slot id + specific reason", () => {
+  assert.throws(
+    () => GameGC.buildBundle(loadTemplate(), { options: { "theme.accent": "red" }, assets: {} }),
+    (e) => e.name === "ValidationError" && e.slotId === "theme.accent" && /#rrggbb/.test(e.message),
+  );
+});
+
+test("uploaded textures are placed at their assetPath with the uploaded bytes, embedded in place of the defaults", () => {
+  const template = loadTemplate();
+  const upload = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+  for (const id of ["skybox.texture", "ground.texture"]) {
+    const slot = slotById(template, id);
+    const out = GameGC.buildBundle(template, { options: {}, assets: { [id]: upload } });
+
+    // placed at the expected asset path — with the uploaded bytes, not the default's
+    assert.ok(out.files[slot.assetPath], "bundle has the texture at " + slot.assetPath);
+    assert.deepEqual(out.files[slot.assetPath], upload);
+    assert.notDeepEqual(out.files[slot.assetPath], template.files[slot.assetPath]);
+
+    // embedded in GC_ASSETS (file:// rule D4): the game loads it by bytes
+    assert.equal(gcAssets(out)[slot.assetPath], GameGC.toBase64(upload));
+  }
+});
+
+test("a texture upload failing format or size is rejected with the specific reason", () => {
+  const template = loadTemplate();
+  const slot = slotById(template, "ground.texture");
+  const png = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+  // size is checked before format (NOTES T2.2), so padding past maxBytes wins
+  const tooBig = new Uint8Array(png.byteLength + slot.requirements.maxBytes + 1);
+  tooBig.set(png);
+  const cases = [
+    ["too large", tooBig, /too large/],
+    ["unsupported format", new Uint8Array(fs.readFileSync("tests/fixtures/glb/bad.txt")), /unsupported image format/],
+  ];
+  for (const [label, bytes, re] of cases) {
+    assert.throws(
+      () => GameGC.buildBundle(template, { options: {}, assets: { "ground.texture": bytes } }),
+      (e) => e.name === "ValidationError" && e.slotId === "ground.texture" && re.test(e.message),
+      label + " must be rejected with the specific reason",
+    );
+  }
+});
+
+test("image2d uploads are validated and placed at the slot assetPath (shared contract kind)", () => {
+  // the TD template ships no image2d slot, so exercise the kind with a manifest
+  // declaring one — the contract must handle it like any binary slot
+  const slot = { id: "ui.icon", label: "Icon", kind: "image2d", requirements: { maxBytes: 1048576 }, assetPath: "assets/ui/icon.png" };
+  const template = {
+    manifest: [slot],
+    defaultAssets: [],
+    files: { "index.html": "<html></html>", "assets/ui/icon.png": new Uint8Array([1, 2, 3]) },
+  };
+  const upload = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+  const out = GameGC.buildBundle(template, { options: {}, assets: { "ui.icon": upload } });
+  assert.deepEqual(out.files[slot.assetPath], upload);
+  assert.equal(gcAssets(out)[slot.assetPath], GameGC.toBase64(upload));
+  assert.throws(
+    () => GameGC.buildBundle(template, { options: {}, assets: { "ui.icon": new Uint8Array([1, 2, 3]) } }),
+    (e) => e.name === "ValidationError" && e.slotId === "ui.icon" && /unsupported image format/.test(e.message),
+  );
+});
