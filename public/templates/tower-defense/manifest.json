@@ -1,6 +1,6 @@
 {
   "name": "Tower Defense",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "slots": [
     {
       "id": "game.title",
@@ -13,6 +13,26 @@
       "kind": "text"
     }
   ],
+  "defaultAssets": [
+    "assets/models/tower_arrow.glb",
+    "assets/models/tower_cannon.glb",
+    "assets/models/tower_frost.glb",
+    "assets/models/enemy_grunt.glb",
+    "assets/models/enemy_brute.glb",
+    "assets/models/base_castle.glb",
+    "assets/textures/ground.png",
+    "assets/textures/skybox.png",
+    "assets/audio/place.wav",
+    "assets/audio/shoot_arrow.wav",
+    "assets/audio/shoot_cannon.wav",
+    "assets/audio/shoot_frost.wav",
+    "assets/audio/hit.wav",
+    "assets/audio/kill.wav",
+    "assets/audio/leak.wav",
+    "assets/audio/wave.wav",
+    "assets/audio/win.wav",
+    "assets/audio/lose.wav"
+  ],
   "bundleFiles": [
     "index.html",
     "js/vendor/babylon.js",
@@ -20,6 +40,26 @@
     "js/generated-options.js",
     "js/generated-assets.js",
     "js/assets.js",
-    "js/game.js"
+    "js/td-core.js",
+    "js/td-audio.js",
+    "js/game.js",
+    "assets/models/tower_arrow.glb",
+    "assets/models/tower_cannon.glb",
+    "assets/models/tower_frost.glb",
+    "assets/models/enemy_grunt.glb",
+    "assets/models/enemy_brute.glb",
+    "assets/models/base_castle.glb",
+    "assets/textures/ground.png",
+    "assets/textures/skybox.png",
+    "assets/audio/place.wav",
+    "assets/audio/shoot_arrow.wav",
+    "assets/audio/shoot_cannon.wav",
+    "assets/audio/shoot_frost.wav",
+    "assets/audio/hit.wav",
+    "assets/audio/kill.wav",
+    "assets/audio/leak.wav",
+    "assets/audio/wave.wav",
+    "assets/audio/win.wav",
+    "assets/audio/lose.wav"
   ]
 }

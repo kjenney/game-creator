@@ -18,7 +18,10 @@ export async function exportBundle(template, collected) {
     assets[slotId] = new Uint8Array(await file.arrayBuffer());
   }
 
-  const out = GameGC.buildBundle({ manifest: template.manifest.slots, files }, { options: collected.options, assets: assets });
+  const out = GameGC.buildBundle(
+    { manifest: template.manifest.slots, defaultAssets: template.manifest.defaultAssets || [], files },
+    { options: collected.options, assets: assets },
+  );
 
   const zip = new JSZip();
   Object.entries(out.files).forEach(([p, v]) => zip.file(p, v));

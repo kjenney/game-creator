@@ -11,13 +11,65 @@
     html, body { margin: 0; height: 100%; background: #10141a; color: #e8ecf1;
                  font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
     #gc-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
-    #gc-overlay { position: fixed; top: 0; left: 0; right: 0; padding: 12px 16px;
-                  display: flex; align-items: baseline; gap: 12px; pointer-events: none; }
+    #gc-overlay { position: fixed; top: 0; left: 0; padding: 12px 16px;
+                  display: flex; align-items: baseline; gap: 12px; pointer-events: none; z-index: 5; }
     #gc-title { font-size: 22px; font-weight: 700; letter-spacing: 0.3px;
                 border-bottom: 3px solid var(--gc-accent); padding-bottom: 2px; }
     #gc-commander { font-size: 14px; opacity: 0.85; }
+
+    /* HUD (top-right): the fixed economy/wave/base state */
+    #gc-hud { position: fixed; top: 12px; right: 16px; display: flex; gap: 10px;
+              pointer-events: none; z-index: 5; }
+    .hud-item { background: rgba(10, 14, 20, 0.75); border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 8px; padding: 6px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .hud-item b { color: var(--gc-accent); font-weight: 700; }
+    .hud-item.warn b { color: #ff6b5e; }
+
+    /* Tower palette (bottom bar): pick a tower, then click a build spot */
+    #gc-palette { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 10px;
+                  align-items: stretch; justify-content: center; padding: 12px 16px 16px;
+                  background: linear-gradient(to top, rgba(10, 14, 20, 0.9), rgba(10, 14, 20, 0));
+                  z-index: 5; }
+    .tower-card { cursor: pointer; text-align: left; min-width: 150px; color: #e8ecf1;
+                  background: rgba(20, 26, 36, 0.9); border: 2px solid rgba(255, 255, 255, 0.14);
+                  border-radius: 10px; padding: 8px 12px; font: inherit; }
+    .tower-card:hover { border-color: rgba(255, 255, 255, 0.35); }
+    .tower-card.selected { border-color: var(--gc-accent); background: rgba(40, 34, 22, 0.95); }
+    .tower-card.disabled { opacity: 0.45; }
+    .tower-card .t-name { font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+    .tower-card .t-name kbd { font: 11px/1.4 inherit; background: rgba(255,255,255,0.12); border-radius: 4px;
+                              padding: 1px 5px; font-weight: 400; }
+    .tower-card .t-cost { color: var(--gc-accent); font-weight: 700; }
+    .tower-card .t-desc { font-size: 12px; opacity: 0.75; margin-top: 2px; }
+    #gc-start { cursor: pointer; font: inherit; font-weight: 700; font-size: 15px; color: #10141a;
+                background: var(--gc-accent); border: none; border-radius: 10px; padding: 8px 22px; }
+    #gc-start:hover { filter: brightness(1.1); }
+    #gc-start:disabled { opacity: 0.5; cursor: default; filter: none; }
+
+    /* transient message (placement errors, hints) */
+    #gc-toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+                background: rgba(58, 18, 22, 0.95); color: #ffb3ab; border-radius: 8px;
+                padding: 8px 16px; font-size: 14px; z-index: 6; display: none; }
+    #gc-toast.info { background: rgba(18, 34, 58, 0.95); color: #a8c8ff; }
+
+    /* win / lose overlay */
+    #gc-end { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+              background: rgba(6, 8, 12, 0.8); z-index: 10; }
+    /* the author `display: flex` above would override the `hidden` attribute's
+       UA style — restore it explicitly, or the overlay covers the whole game */
+    #gc-end[hidden] { display: none; }
+    .end-panel { text-align: center; background: rgba(16, 21, 29, 0.97); border: 1px solid rgba(255, 255, 255, 0.15);
+                 border-radius: 14px; padding: 34px 48px; max-width: 440px; }
+    .end-panel h2 { margin: 0 0 10px; font-size: 30px; }
+    .end-panel.win h2 { color: var(--gc-accent); }
+    .end-panel.lose h2 { color: #ff6b5e; }
+    .end-panel p { margin: 0 0 22px; opacity: 0.85; line-height: 1.5; }
+    .end-panel button { cursor: pointer; font: inherit; font-weight: 700; font-size: 16px; color: #10141a;
+                        background: var(--gc-accent); border: none; border-radius: 10px; padding: 10px 28px; }
+    .end-panel button:hover { filter: brightness(1.1); }
+
     #gc-error { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px;
-                background: #3a1216; color: #ffb3ab; font-size: 14px; display: none; }
+                background: #3a1216; color: #ffb3ab; font-size: 14px; display: none; z-index: 20; }
   </style>
 </head>
 <body>
@@ -26,15 +78,50 @@
     <span id="gc-title">Tower Defense</span>
     <span id="gc-commander"></span>
   </div>
+
+  <div id="gc-hud">
+    <span class="hud-item" id="gc-hud-gold">Gold <b>0</b></span>
+    <span class="hud-item" id="gc-hud-wave">Wave <b>0/10</b></span>
+    <span class="hud-item" id="gc-hud-base">Base <b>20</b></span>
+  </div>
+
+  <div id="gc-toast"></div>
+
+  <div id="gc-palette">
+    <button type="button" class="tower-card" id="gc-tower-arrow" data-tower="arrow">
+      <span class="t-name"><span>Arrow</span><span class="t-cost">50g</span></span>
+      <span class="t-desc">Fast &middot; single target</span>
+    </button>
+    <button type="button" class="tower-card" id="gc-tower-cannon" data-tower="cannon">
+      <span class="t-name"><span>Cannon</span><span class="t-cost">100g</span></span>
+      <span class="t-desc">Slow &middot; splash damage</span>
+    </button>
+    <button type="button" class="tower-card" id="gc-tower-frost" data-tower="frost">
+      <span class="t-name"><span>Frost</span><span class="t-cost">75g</span></span>
+      <span class="t-desc">Slows enemies</span>
+    </button>
+    <button type="button" id="gc-start">Start wave 1</button>
+  </div>
+
+  <div id="gc-end" hidden>
+    <div class="end-panel" id="gc-end-panel">
+      <h2 id="gc-end-title"></h2>
+      <p id="gc-end-detail"></p>
+      <button type="button" id="gc-again">Play again</button>
+    </div>
+  </div>
+
   <div id="gc-error"></div>
 
   <!-- file:// rules: classic scripts only, relative paths, this exact order (NOTES §3):
-       vendor → contract → generated options → generated assets → asset loader → game -->
+       vendor → contract → generated options → generated assets → asset loader → core → audio → game -->
   <script src="js/vendor/babylon.js"></script>
   <script src="js/gc-contract.js"></script>
   <script src="js/generated-options.js"></script>
   <script src="js/generated-assets.js"></script>
   <script src="js/assets.js"></script>
+  <script src="js/td-core.js"></script>
+  <script src="js/td-audio.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
