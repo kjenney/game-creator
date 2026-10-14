@@ -11,6 +11,84 @@
       "id": "game.commander",
       "label": "Commander name",
       "kind": "text"
+    },
+    {
+      "id": "tower.arrow.model",
+      "label": "Arrow tower model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": ["barrel"],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/tower_arrow.glb"
+    },
+    {
+      "id": "tower.cannon.model",
+      "label": "Cannon tower model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": ["barrel"],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/tower_cannon.glb"
+    },
+    {
+      "id": "tower.frost.model",
+      "label": "Frost tower model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": ["barrel"],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/tower_frost.glb"
+    },
+    {
+      "id": "enemy.grunt.model",
+      "label": "Grunt enemy model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": [],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/enemy_grunt.glb"
+    },
+    {
+      "id": "enemy.brute.model",
+      "label": "Brute enemy model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": [],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/enemy_brute.glb"
+    },
+    {
+      "id": "base.castle.model",
+      "label": "Base castle model",
+      "kind": "model3d",
+      "requirements": {
+        "format": "glb",
+        "requiredNodes": [],
+        "pivot": "origin",
+        "targetScale": 1.0,
+        "maxBytes": 2097152
+      },
+      "assetPath": "assets/models/base_castle.glb"
     }
   ],
   "defaultAssets": [

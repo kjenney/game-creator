@@ -1,8 +1,12 @@
 // THE seam (NOTES §5, spec §Testing): (Template, Option values, uploads) → output bundle.
 // Run headless in Node; asserts the produced bundle, not implementation.
-// T1 covers the thin path: title injection + bundle structure. (T2/T3 add GLB/texture slots and tests.)
+// T1 covers the thin path: title injection + bundle structure.
+// T2 (issue #3) covers the model3d Option: a conforming GLB is accepted and
+// placed at the slot's assetPath, and each failing requirement is rejected
+// with its specific reason.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import GameGC from "../src/shared/contract.js"; // CJS default interop (NOTES D7)
 import { loadTemplate } from "./helpers.js";
 
@@ -113,4 +117,49 @@ test("unknown slot id as an asset upload is rejected", () => {
     () => GameGC.buildBundle(loadTemplate(), { options: {}, assets: { "nope.slot": new Uint8Array([1]) } }),
     (e) => e.name === "ValidationError" && /unknown option slot/.test(e.message),
   );
+});
+
+// ---- T2 (issue #3): the model3d Option through the export seam ----
+
+const modelSlot = (template, id) => template.manifest.filter((s) => s.id === id)[0];
+
+test("a conforming GLB is accepted and placed at the slot's assetPath, replacing the default", () => {
+  const template = loadTemplate();
+  const slot = modelSlot(template, "tower.cannon.model");
+  assert.ok(slot && slot.kind === "model3d", "manifest declares a model3d cannon slot");
+
+  const upload = new Uint8Array(fs.readFileSync("tests/fixtures/glb/valid-tower.glb"));
+  const out = GameGC.buildBundle(template, { options: {}, assets: { "tower.cannon.model": upload } });
+
+  // placed at the expected asset path — with the uploaded bytes, not the default's
+  assert.ok(out.files[slot.assetPath], "bundle has the model at " + slot.assetPath);
+  assert.deepEqual(out.files[slot.assetPath], upload);
+  assert.notDeepEqual(out.files[slot.assetPath], template.files[slot.assetPath]);
+
+  // embedded in GC_ASSETS (file:// rule D4): the game loads it by bytes,
+  // in place of the default model
+  assert.equal(gcAssets(out)[slot.assetPath], GameGC.toBase64(upload));
+});
+
+test("an upload failing each model requirement is rejected with the specific reason", () => {
+  const template = loadTemplate();
+  const slot = modelSlot(template, "tower.cannon.model");
+  assert.ok(slot, "manifest declares a model3d cannon slot");
+  const ok = new Uint8Array(fs.readFileSync("tests/fixtures/glb/valid-tower.glb"));
+  // size is checked first (NOTES T2.2), so padding past maxBytes wins over the
+  // now-bogus GLB totalLength (note: TypedArray.set returns undefined — assign first)
+  const tooBig = new Uint8Array(ok.byteLength + slot.requirements.maxBytes + 1);
+  tooBig.set(ok);
+  const cases = [
+    ["too large", tooBig, /too large/],
+    ["wrong format", new Uint8Array(fs.readFileSync("tests/fixtures/glb/bad.txt")), /not a GLB/],
+    ["missing required node", new Uint8Array(fs.readFileSync("tests/fixtures/glb/missing-node.glb")), /missing required node "barrel"/],
+  ];
+  for (const [label, bytes, re] of cases) {
+    assert.throws(
+      () => GameGC.buildBundle(template, { options: {}, assets: { "tower.cannon.model": bytes } }),
+      (e) => e.name === "ValidationError" && e.slotId === "tower.cannon.model" && re.test(e.message),
+      label + " must be rejected with the specific reason",
+    );
+  }
 });
