@@ -4,6 +4,10 @@
 //
 // Per-kind renderers: text (input), color (picker, default from the manifest),
 // texture/image2d/model3d (file input + that slot's requirements line).
+// Every slot also gets a Reset control (issue #10 / US17): it restores the
+// field to the game's original value — WHAT that value is per kind is the
+// shared contract's resetValue (US33: one source of truth, no drift).
+import GameGC from "../shared/contract.js";
 
 function requirementsText(slot) {
   const r = slot.requirements;
@@ -60,6 +64,18 @@ export function renderForm(container, slots) {
     div.appendChild(label);
 
     div.appendChild(field);
+
+    // Reset (issue #10 / US17): restore the field to the game's original value
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "slot-reset";
+    reset.id = "reset-" + slot.id.replace(/[^a-zA-Z0-9_-]/g, "-");
+    reset.title = "Restore the game's original value";
+    reset.textContent = "Reset";
+    reset.addEventListener("click", () => {
+      field.value = GameGC.resetValue(slot) || ""; // null (binary) → clears the file input
+    });
+    div.appendChild(reset);
 
     const req = requirementsText(slot);
     if (req) {

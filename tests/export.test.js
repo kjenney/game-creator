@@ -345,3 +345,128 @@ test("each of the 6 model slots rejects an invalid GLB with its own slot id + sp
     );
   }
 });
+
+// ---- T6 (issue #10 / US17): reset any field back to the game's original value ----
+// Product contract: a customized field, once reset, exports exactly what an
+// UNTOUCHED form would — the game's original value, where the game reads it.
+// Reset is field-level (form.js applies the shared contract's resetValue to
+// the field); the collector then normalizes it (empty/absent → omitted,
+// creator/collector.js). What an untouched form collects: text/file fields
+// empty (omitted), the color picker seeded at the manifest default (a color
+// input always has a value, so the untouched export carries it — equal to the
+// game's original accent).
+
+const untouchedOptions = (template) => {
+  const options = {};
+  for (const s of template.manifest) options[s.id] = s.kind === "color" ? s.default : null;
+  return options;
+};
+
+// the collector's normalization of a reset field value (collector.js)
+const resetOption = (slot) => {
+  const v = GameGC.resetValue(slot);
+  return v == null || v === "" ? null : v;
+};
+
+const bundleEqual = (a, b) => {
+  assert.deepEqual(Object.keys(a.files).sort(), Object.keys(b.files).sort(), "same bundle structure");
+  for (const k of Object.keys(a.files).sort())
+    assert.deepEqual(a.files[k], b.files[k], "identical bytes for " + k);
+};
+
+test("resetting a customized text field restores the game's original title (bundle identical to untouched)", () => {
+  const template = loadTemplate();
+  const slot = slotById(template, "game.title");
+  const untouched = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+
+  // the customization is real: the title rides in GC_OPTIONS, where the game reads it
+  const customized = GameGC.buildBundle(template, { options: { ...untouchedOptions(template), "game.title": "Ken's Custom" }, assets: {} });
+  assert.equal(gcOptions(customized)["game.title"], "Ken's Custom");
+  assert.notEqual(customized.files["js/generated-options.js"], untouched.files["js/generated-options.js"]);
+
+  // after reset the title is omitted again — the game falls back to its own ("Tower Defense")
+  const reset = GameGC.buildBundle(template, { options: { ...untouchedOptions(template), "game.title": resetOption(slot) }, assets: {} });
+  assert.equal(gcOptions(reset)["game.title"], undefined, "reset title omitted — the game uses its original");
+  bundleEqual(reset, untouched);
+});
+
+test("resetting the accent color restores the manifest default (the case issue #10 calls out)", () => {
+  const template = loadTemplate();
+  const slot = slotById(template, "theme.accent");
+  const untouched = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+
+  // the customization is real: the custom accent rides in GC_OPTIONS
+  const customized = GameGC.buildBundle(template, { options: { ...untouchedOptions(template), "theme.accent": "#0b66ff" }, assets: {} });
+  assert.equal(gcOptions(customized)["theme.accent"], "#0b66ff");
+  assert.notEqual(customized.files["js/generated-options.js"], untouched.files["js/generated-options.js"]);
+
+  // after reset the accent is back to the game's original — the manifest default,
+  // which matches the bundle's own --gc-accent fallback, where the game reads it
+  const reset = GameGC.buildBundle(template, { options: { ...untouchedOptions(template), "theme.accent": resetOption(slot) }, assets: {} });
+  assert.equal(gcOptions(reset)["theme.accent"], slot.default, "reset accent = the manifest default");
+  assert.match(text(reset.files["js/generated-options.js"]), /"theme\.accent":\s*"#e8a33d"/);
+  bundleEqual(reset, untouched);
+});
+
+test("resetting a model upload restores the game's default model (bytes + embedding)", () => {
+  const template = loadTemplate();
+  const slot = slotById(template, "tower.cannon.model");
+  const upload = new Uint8Array(fs.readFileSync("tests/fixtures/glb/valid-tower.glb"));
+  const untouched = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+
+  // the customization is real: the upload's bytes at the assetPath, embedded
+  const customized = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: { "tower.cannon.model": upload } });
+  assert.deepEqual(customized.files[slot.assetPath], upload);
+  assert.equal(gcAssets(customized)[slot.assetPath], GameGC.toBase64(upload));
+
+  // after reset (no file) the Template's default model is back at the assetPath, embedded
+  const reset = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+  assert.deepEqual(reset.files[slot.assetPath], template.files[slot.assetPath], "default model bytes restored");
+  assert.equal(gcAssets(reset)[slot.assetPath], GameGC.toBase64(template.files[slot.assetPath]), "default model re-embedded");
+  bundleEqual(reset, untouched);
+});
+
+test("resetting a texture upload restores the game's default texture", () => {
+  const template = loadTemplate();
+  const slot = slotById(template, "ground.texture");
+  const upload = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+  const untouched = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+
+  const customized = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: { "ground.texture": upload } });
+  assert.deepEqual(customized.files[slot.assetPath], upload);
+
+  const reset = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+  assert.deepEqual(reset.files[slot.assetPath], template.files[slot.assetPath], "default texture bytes restored");
+  bundleEqual(reset, untouched);
+});
+
+test("resetting the WHOLE surface (all 11 slots) exports exactly what an untouched form would", () => {
+  const template = loadTemplate();
+  const tower = new Uint8Array(fs.readFileSync("tests/fixtures/glb/valid-tower.glb"));
+  const tex = new Uint8Array(fs.readFileSync("tests/fixtures/textures/ground.png"));
+
+  // customize every slot (2 text + 1 color as values, 6 model + 2 texture as uploads)
+  const options = { "game.title": "Custom Title", "game.commander": "Custom Commander", "theme.accent": "#0b66ff" };
+  const assets = {};
+  for (const s of template.manifest) {
+    if (s.kind === "model3d") assets[s.id] = tower;
+    else if (s.kind === "texture") assets[s.id] = tex;
+  }
+  const customized = GameGC.buildBundle(template, { options, assets });
+  assert.equal(gcOptions(customized)["game.title"], "Custom Title");
+  for (const s of template.manifest.filter((x) => x.kind === "model3d"))
+    assert.deepEqual(customized.files[s.assetPath], tower, s.id + " customized");
+
+  // now reset every field (contract value + collector normalization):
+  // text → omitted, color → the manifest default, uploads → no file
+  const resetOptions = {};
+  for (const s of template.manifest) {
+    const v = resetOption(s);
+    if (v != null) resetOptions[s.id] = v;
+  }
+  const reset = GameGC.buildBundle(template, { options: resetOptions, assets: {} });
+
+  // byte-identical to the untouched form's export — the customization is fully undone
+  const untouched = GameGC.buildBundle(template, { options: untouchedOptions(template), assets: {} });
+  bundleEqual(reset, untouched);
+});

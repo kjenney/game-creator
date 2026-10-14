@@ -130,3 +130,33 @@ test("validateAsset(texture) accepts PNG bytes and rejects non-image bytes with 
     (e) => e.name === "ValidationError" && /unsupported image format/.test(e.message),
   );
 });
+
+// ---- resetValue (issue #10 / US17): the field value that restores the game's original state ----
+// The form applies this to the field on Reset (creator/form.js); the collector
+// then normalizes it (empty/absent → omitted) so buildBundle reproduces the
+// Template's original state. The value per kind is the contract's to decide.
+
+test("resetValue returns the game-original field value per kind", () => {
+  assert.equal(GameGC.resetValue(titleSlot), ""); // text: blank = keep the game's default
+  assert.equal(GameGC.resetValue({ ...accentSlot, default: "#e8a33d" }), "#e8a33d"); // color: the manifest's own accent
+  assert.equal(GameGC.resetValue(cannonSlot), null); // model3d: no file → the Template's default art
+  assert.equal(GameGC.resetValue(groundSlot), null); // texture: same
+});
+
+test("resetValue rejects a color slot with no manifest default — the reset has no original to restore", () => {
+  assert.throws(
+    () => GameGC.resetValue(accentSlot), // accentSlot above declares no default
+    (e) => e.name === "ValidationError" && e.slotId === "theme.accent" && /no manifest default/.test(e.message),
+  );
+});
+
+test("resetValue rejects a malformed manifest default and an unknown kind with the slot id + reason", () => {
+  assert.throws(
+    () => GameGC.resetValue({ ...accentSlot, default: "red" }),
+    (e) => e.name === "ValidationError" && e.slotId === "theme.accent" && /#rrggbb/.test(e.message),
+  );
+  assert.throws(
+    () => GameGC.resetValue({ id: "x.y", label: "X", kind: "sound" }),
+    (e) => e.name === "ValidationError" && e.slotId === "x.y" && /unknown kind/.test(e.message),
+  );
+});

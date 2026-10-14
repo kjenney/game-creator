@@ -49,6 +49,25 @@
     return true;
   }
 
+  // ---- reset (issue #10 / US17): the field value that restores the game's original state ----
+  // Returns the value the form field should hold after a reset, such that the
+  // collector's normalization (empty/absent → omitted, see creator/collector.js)
+  // plus buildBundle reproduce the Template's original state:
+  //   text    → ""            (blank = "keep the game's default" — the collector omits it)
+  //   color   → slot.default  (the manifest's own accent — the game's original)
+  //   binary  → null          (no file → the Template's default art)
+  function resetValue(slot) {
+    if (slot.kind === "text") return "";
+    if (slot.kind === "color") {
+      if (slot.default == null)
+        throw ValidationError(slot.id, "color slot has no manifest default to reset to");
+      validateColor(slot, slot.default); // a malformed default has no well-defined original
+      return slot.default;
+    }
+    if (BINARY_KINDS.indexOf(slot.kind) >= 0) return null;
+    throw ValidationError(slot.id, "unknown kind " + slot.kind);
+  }
+
   // ---- GLB reader (hand-rolled; Khronos binary glTF layout, D5) ----
   // header: magic u32 0x46546C67 ("glTF"), version u32, totalLength u32 (all little-endian)
   // chunks: [length u32, type u32, payload]; JSON chunk type 0x4E4F534A, BIN 0x004E4942
@@ -155,6 +174,7 @@
     KINDS: KINDS, BINARY_KINDS: BINARY_KINDS, ValidationError: ValidationError,
     toBase64: toBase64, fromBase64: fromBase64,
     validateText: validateText, validateColor: validateColor, validateAsset: validateAsset,
+    resetValue: resetValue,
     readGlb: readGlb, buildBundle: buildBundle
   };
 });
