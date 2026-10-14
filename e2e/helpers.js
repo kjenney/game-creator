@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import JSZip from "jszip";
 import { expect } from "@playwright/test";
 import GameGC from "../src/shared/contract.js";
 import { loadTemplate } from "../tests/helpers.js";
@@ -29,6 +30,30 @@ export function buildBundleDir(options = {}) {
   }
   fs.mkdirSync(path.join(dir, "assets"), { recursive: true }); // standard layout
   return dir;
+}
+
+// Drive the REAL creator UI: click Export, capture the zip download, and unzip
+// it Node-side into a fresh dir — the exact bundle a user gets after unzipping.
+// (Shared by the full-surface tests; the per-kind UI tests keep their own inline
+// copies so a regression in one stays isolated.)
+export async function exportViaUI(page) {
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-btn").click(),
+  ]);
+  const zipPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "gc-full-zip-")), await download.suggestedFilename());
+  await download.saveAs(zipPath);
+  await expect(page.locator("#export-status")).toHaveText(/Done/);
+
+  const zip = await JSZip.loadAsync(fs.readFileSync(zipPath));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "gc-full-unzip-"));
+  for (const entry of Object.values(zip.files)) {
+    if (entry.dir) continue;
+    const full = path.join(outDir, entry.name);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, await entry.async("nodebuffer"));
+  }
+  return outDir;
 }
 
 // The smoke test proper: no server, no console/page errors, engine + scene
