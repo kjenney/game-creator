@@ -1,0 +1,71 @@
+site_name: game-creator
+site_description: >-
+  A web app that turns a game Template plus your Options into a
+  self-contained, playable web game — pick a game, make it yours, take it with you.
+site_url: https://kjenney.github.io/game-creator/
+repo_name: kjenney/game-creator
+repo_url: https://github.com/kjenney/game-creator
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    primary: "#e8a33d" # the game's own accent (manifest theme.accent default)
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Architecture: architecture.md
+  - Glossary: glossary.md
+  - Creator app:
+      - creator/index.md
+      - main.js: creator/main.md
+      - registry.js: creator/registry.md
+      - form.js: creator/form.md
+      - collector.js: creator/collector.md
+      - export.js: creator/export.md
+      - summary.js: creator/summary.md
+  - Shared contract:
+      - contract/index.md
+      - Option slots & validation: contract/options.md
+      - buildBundle: contract/build-bundle.md
+  - Template anatomy:
+      - template/index.md
+      - Tower Defense manifest: template/tower-defense.md
+      - td-core.js — the rules: template/td-core.md
+      - game.js — the view: template/game-view.md
+      - assets.js & td-audio.js: template/assets-audio.md
+  - Authoring:
+      - authoring/index.md
+      - Default art: authoring/art.md
+      - Vendoring Babylon: authoring/vendor.md
+  - Testing:
+      - testing/index.md
+      - Unit suite (Node): testing/unit.md
+      - E2E suite (Playwright): testing/e2e.md
+      - CI: testing/ci.md
+  - ADRs:
+      - adr/index.md
+      - ADR 0001 — Options customize content only: adr/0001-options-customize-content-only.md
+      - ADR 0002 — Self-contained template bundle: adr/0002-self-contained-template-bundle.md
+      - ADR 0003 — Export only, no backend: adr/0003-export-only-no-backend.md
+      - ADR 0004 — CI gates on the smoke test: adr/0004-ci-gates-on-automated-smoke-test.md
