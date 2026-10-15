@@ -74,6 +74,9 @@ export function renderForm(container, slots) {
     reset.textContent = "Reset";
     reset.addEventListener("click", () => {
       field.value = GameGC.resetValue(slot) || ""; // null (binary) → clears the file input
+      // a reset IS a field change: fire the standard event so live listeners
+      // (the pre-export summary, issue #11) update just as with a user edit
+      field.dispatchEvent(new Event("input", { bubbles: true }));
     });
     div.appendChild(reset);
 

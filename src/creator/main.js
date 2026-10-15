@@ -4,6 +4,7 @@ import { TEMPLATES, loadManifest } from "./registry.js";
 import { renderForm } from "./form.js";
 import { collect } from "./collector.js";
 import { exportBundle } from "./export.js";
+import { renderSummary } from "./summary.js";
 
 const $ = (id) => document.getElementById(id);
 let active = null; // { template, manifest }
@@ -21,10 +22,21 @@ async function selectTemplate(t) {
   $("form-heading").textContent = "Customize " + loaded.manifest.name;
   renderForm($("form"), loaded.manifest.slots);
   $("form-section").hidden = false;
+  $("summary-section").hidden = false;
   $("export-btn").disabled = false;
   $("export-btn").textContent = "Export my " + loaded.manifest.name + "…";
+  renderSummary($("summary"), loaded.manifest, $("form"));
   status("");
 }
+
+function refreshSummary() {
+  if (active) renderSummary($("summary"), active.manifest, $("form"));
+}
+
+// Live review (issue #11 / US18): the summary tracks the form, so what the
+// user sees right before Export is exactly what the export will receive —
+// the same collect() output, the same contract's summarize call.
+$("form").addEventListener("input", refreshSummary);
 
 function renderTemplateList() {
   const list = $("template-list");
