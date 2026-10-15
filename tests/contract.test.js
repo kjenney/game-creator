@@ -1,10 +1,11 @@
 // Contract module (shared between creator, tests, and the exported game).
-// Seams under test: the value validators and the portable base64 codec —
-// public behavior only (NOTES §4, spec §Testing).
+// Seams under test: the value validators, the portable base64 codec, and the
+// pre-export summary — public behavior only (NOTES §4, spec §Testing).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import GameGC from "../src/shared/contract.js"; // CJS default interop (NOTES D7)
+import { loadTemplate } from "./helpers.js";
 
 const titleSlot = { id: "game.title", label: "Game title", kind: "text" };
 const accentSlot = { id: "theme.accent", label: "Accent color", kind: "color" };
@@ -157,6 +158,95 @@ test("resetValue rejects a malformed manifest default and an unknown kind with t
   );
   assert.throws(
     () => GameGC.resetValue({ id: "x.y", label: "X", kind: "sound" }),
+    (e) => e.name === "ValidationError" && e.slotId === "x.y" && /unknown kind/.test(e.message),
+  );
+});
+
+// ---- summarize (issue #11 / US18): customized vs default per slot, pre-export ----
+// The creator's summary section renders these rows (creator/summary.js) from
+// the same collected data the export consumes; the customized/default call
+// per kind is the contract's to decide (US33) so the review the user confirms
+// can't drift from what buildBundle does with the very same input.
+
+test("summarize lists every manifest slot in manifest order, all default on an empty form", () => {
+  // the REAL TD manifest: spec US16-25 — the TD ships exactly 11 Option slots
+  const manifest = loadTemplate().manifest;
+  assert.equal(manifest.length, 11);
+
+  const result = GameGC.summarize(manifest, {});
+  assert.equal(result.total, 11);
+  assert.equal(result.customized, 0);
+  assert.deepEqual(result.slots.map((r) => r.id), manifest.map((s) => s.id)); // form order
+  assert.deepEqual(result.slots.map((r) => r.label), manifest.map((s) => s.label)); // user-facing labels
+  assert.ok(result.slots.every((r) => r.status === "default" && r.value === null));
+});
+
+test("summarize marks a text slot customized iff a non-blank value was set, and shows it", () => {
+  for (const v of [null, undefined, "", "   "]) {
+    const r = GameGC.summarize([titleSlot], { options: { "game.title": v } });
+    assert.equal(r.customized, 0, JSON.stringify(v));
+    assert.equal(r.slots[0].status, "default");
+    assert.equal(r.slots[0].value, null);
+  }
+  const set = GameGC.summarize([titleSlot], { options: { "game.title": "Ken's Game" } });
+  assert.equal(set.customized, 1);
+  assert.equal(set.slots[0].status, "customized");
+  assert.equal(set.slots[0].value, "Ken's Game"); // the value the export will receive
+});
+
+test("summarize marks a color slot customized only when it differs from the manifest default", () => {
+  const slot = { ...accentSlot, default: "#e8a33d" };
+  // at the default (either case — hex comparison is case-insensitive) → default
+  for (const v of ["#e8a33d", "#E8A33D"]) {
+    const r = GameGC.summarize([slot], { options: { "theme.accent": v } });
+    assert.equal(r.customized, 0, v);
+  }
+  // no value at all → the game's original accent
+  assert.equal(GameGC.summarize([slot], { options: {} }).customized, 0);
+  // changed → customized, with the hex shown
+  const r = GameGC.summarize([slot], { options: { "theme.accent": "#0b66ff" } });
+  assert.equal(r.customized, 1);
+  assert.equal(r.slots[0].status, "customized");
+  assert.equal(r.slots[0].value, "#0b66ff");
+});
+
+test("summarize marks a color slot with no manifest default customized for any value", () => {
+  const r = GameGC.summarize([accentSlot], { options: { "theme.accent": "#112233" } }); // accentSlot declares no default
+  assert.equal(r.customized, 1);
+  assert.equal(r.slots[0].value, "#112233");
+});
+
+test("summarize marks binary slots customized iff a file was uploaded, and shows the filename", () => {
+  const none = GameGC.summarize([cannonSlot, groundSlot], {});
+  assert.equal(none.customized, 0);
+  assert.ok(none.slots.every((r) => r.status === "default" && r.value === null));
+
+  const r = GameGC.summarize([cannonSlot, groundSlot], {
+    files: { "tower.cannon.model": { name: "my-tower.glb" } },
+  });
+  assert.equal(r.customized, 1);
+  assert.equal(r.slots[0].status, "customized");
+  assert.equal(r.slots[0].value, "my-tower.glb");
+  assert.equal(r.slots[1].status, "default"); // a slot with no upload keeps the game's original
+});
+
+test("summarize counts customizations across kinds and ignores entries for unknown slots", () => {
+  const manifest = [titleSlot, { ...accentSlot, default: "#e8a33d" }, cannonSlot];
+  const r = GameGC.summarize(manifest, {
+    options: { "game.title": "Ken's Game", "theme.accent": "#e8a33d", "nope.slot": "x" },
+    files: { "tower.cannon.model": { name: "my-tower.glb" } },
+  });
+  assert.equal(r.total, 3);
+  assert.equal(r.customized, 2); // title + model; accent is at the default; nope.slot isn't a slot
+});
+
+test("summarize tolerates a missing collected and rejects an unknown kind with the slot id + reason", () => {
+  const r = GameGC.summarize([titleSlot]);
+  assert.equal(r.total, 1);
+  assert.equal(r.customized, 0);
+
+  assert.throws(
+    () => GameGC.summarize([{ id: "x.y", label: "X", kind: "sound" }]),
     (e) => e.name === "ValidationError" && e.slotId === "x.y" && /unknown kind/.test(e.message),
   );
 });

@@ -68,6 +68,46 @@
     throw ValidationError(slot.id, "unknown kind " + slot.kind);
   }
 
+  // ---- summary (issue #11 / US18): customized vs default per slot, pre-export ----
+  // Input is exactly what the collector hands the export (creator/collector.js):
+  //   options: { [slotId]: string | null }  text/color values (null/absent = keep default)
+  //   files:   { [slotId]: { name } }       uploaded binary assets (absent = default art)
+  // -> { slots: [ { id, label, kind, status: "customized"|"default", value: string|null } ],
+  //      customized: number, total: number }
+  // One row per manifest slot, in manifest order (the form's order). The
+  // customized/default call per kind is the contract's to decide (US33), so
+  // the review the user confirms can't drift from what buildBundle does with
+  // the very same input: text is customized iff a non-blank value was set;
+  // color iff it differs from the manifest default (case-insensitive hex);
+  // binary iff a file was uploaded. value is what the UI shows: the text,
+  // the hex, or the uploaded file's name.
+  function summarize(manifest, collected) {
+    collected = collected || {};
+    var options = collected.options || {}, files = collected.files || {};
+    var rows = [], customized = 0;
+    manifest.forEach(function (slot) {
+      var row = { id: slot.id, label: slot.label, kind: slot.kind, status: "default", value: null };
+      if (slot.kind === "text") {
+        var t = options[slot.id];
+        if (typeof t === "string" && t.trim().length > 0) { row.status = "customized"; row.value = t; }
+      } else if (slot.kind === "color") {
+        var c = options[slot.id];
+        if (typeof c === "string" && c.length > 0 &&
+            (slot.default == null || c.toLowerCase() !== String(slot.default).toLowerCase())) {
+          row.status = "customized"; row.value = c;
+        }
+      } else if (BINARY_KINDS.indexOf(slot.kind) >= 0) {
+        var f = files[slot.id];
+        if (f && typeof f.name === "string" && f.name.length > 0) { row.status = "customized"; row.value = f.name; }
+      } else {
+        throw ValidationError(slot.id, "unknown kind " + slot.kind);
+      }
+      if (row.status === "customized") customized++;
+      rows.push(row);
+    });
+    return { slots: rows, customized: customized, total: rows.length };
+  }
+
   // ---- GLB reader (hand-rolled; Khronos binary glTF layout, D5) ----
   // header: magic u32 0x46546C67 ("glTF"), version u32, totalLength u32 (all little-endian)
   // chunks: [length u32, type u32, payload]; JSON chunk type 0x4E4F534A, BIN 0x004E4942
@@ -174,7 +214,7 @@
     KINDS: KINDS, BINARY_KINDS: BINARY_KINDS, ValidationError: ValidationError,
     toBase64: toBase64, fromBase64: fromBase64,
     validateText: validateText, validateColor: validateColor, validateAsset: validateAsset,
-    resetValue: resetValue,
+    resetValue: resetValue, summarize: summarize,
     readGlb: readGlb, buildBundle: buildBundle
   };
 });
