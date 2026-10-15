@@ -5,7 +5,7 @@
 // slot. The customized/default call per kind is the shared contract's
 // summarize (US33: one source of truth), computed from the SAME collected
 // data the export consumes — what the user confirms here is what ships.
-import GameGC from "../shared/contract.js";
+import GameGC from "../shared/gamegc.js";
 import { collect } from "./collector.js";
 
 function renderRow(row) {

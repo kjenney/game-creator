@@ -13,11 +13,23 @@ export default defineConfig({
     headless: true,
     baseURL: "http://localhost:4173/",
   },
-  // Creator app under test: serve the production build (dist/) like a real deploy.
-  webServer: {
-    command: "npm run preview",
-    url: "http://localhost:4173/",
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  // Creator app under test: serve BOTH the production build (dist/, like a real
+  // deploy) and the dev server. Every spec except e2e/dev-server.spec.js uses
+  // the production build (baseURL 4173); the dev server (5173) is covered by
+  // that one spec, because `vite dev` and `vite build` handle CJS app source
+  // differently (dev serves it verbatim, no interop) and must both stay usable.
+  webServer: [
+    {
+      command: "npm run preview",
+      url: "http://localhost:4173/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: "npm run dev",
+      url: "http://localhost:5173/",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 });

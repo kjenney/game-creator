@@ -1,7 +1,7 @@
 // export.js — browser export flow (NOTES §5):
 // fetch bundle bytes → buildBundle (the pure seam, shared with Node tests)
 // → JSZip → blob download. One code path for the transform in browser and Node.
-import GameGC from "../shared/contract.js";
+import GameGC from "../shared/gamegc.js";
 import JSZip from "jszip";
 
 export async function exportBundle(template, collected) {

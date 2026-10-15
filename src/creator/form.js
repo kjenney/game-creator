@@ -7,7 +7,7 @@
 // Every slot also gets a Reset control (issue #10 / US17): it restores the
 // field to the game's original value — WHAT that value is per kind is the
 // shared contract's resetValue (US33: one source of truth, no drift).
-import GameGC from "../shared/contract.js";
+import GameGC from "../shared/gamegc.js";
 
 function requirementsText(slot) {
   const r = slot.requirements;
