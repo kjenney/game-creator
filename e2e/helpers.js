@@ -58,6 +58,8 @@ export async function exportViaUI(page) {
 
 // The smoke test proper: no server, no console/page errors, engine + scene
 // live, FIRST FRAME RENDERED (WebGL), and the user's Options displayed.
+// Pass commander: "" for the game's ORIGINAL state (issue #10 reset): the
+// commander span stays empty, as it does in an uncustomized bundle.
 export async function assertSmoke(page, dir, options = {}) {
   const { title = SMOKE_TITLE, commander = SMOKE_COMMANDER } = options;
   const errors = [];
@@ -74,7 +76,8 @@ export async function assertSmoke(page, dir, options = {}) {
     .toBe(true);
 
   await expect(page.locator("#gc-title")).toHaveText(title);
-  await expect(page.locator("#gc-commander")).toHaveText("Commander: " + commander);
+  if (commander) await expect(page.locator("#gc-commander")).toHaveText("Commander: " + commander);
+  else await expect(page.locator("#gc-commander")).toHaveText("");
 
   if (errors.length) throw new Error("page errors during smoke run:\n" + errors.join("\n"));
 }
