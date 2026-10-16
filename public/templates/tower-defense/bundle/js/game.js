@@ -60,7 +60,15 @@
   sun.intensity = 0.7;
 
   // ---- fixed structural geometry (lanes + build spots = the hitboxes) ----
-  var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 34, height: 14 }, scene);
+  // The ground surface must cover the FULL lateral playfield (spawn → base) so
+  // enemies walking the lanes never leave it. Drawn from the core's constants
+  // (like the lanes/spots below) so it can't drift from the rules — the ground
+  // was the one piece of geometry that was hardcoded, and it landed on the
+  // spawn side, leaving the base off the surface.
+  var GROUND_MARGIN = 4;
+  var groundW = (GCTD.BASE_X + GROUND_MARGIN) - (GCTD.LANE_START_X - GROUND_MARGIN);
+  var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: groundW, height: 14 }, scene);
+  ground.position.x = (GCTD.LANE_START_X + GCTD.BASE_X) / 2;
   var groundMat = new BABYLON.StandardMaterial("groundMat", scene);
   groundMat.diffuseTexture = GCAssets.loadTexture("assets/textures/ground.png");
   groundMat.diffuseTexture.uScale = 6;

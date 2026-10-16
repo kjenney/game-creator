@@ -79,6 +79,23 @@ test("killing an enemy pays its fixed bounty", () => {
   assert.equal(g.gold, goldBefore + GCTD.ENEMIES.grunt.bounty);
 });
 
+test("enemies advance laterally across the board: x increases spawn→base, lane fixed", () => {
+  const g = GCTD.createGame();
+  GCTD.startWave(g);
+  assert.ok(runUntil(g, () => g.enemies.length > 0), "an enemy should spawn");
+  const e = g.enemies[0];
+  const lane = e.lane;
+  const x0 = e.x;
+  assert.ok(x0 - GCTD.LANE_START_X < 0.5, "enemy spawns at the spawn line (x ≈ LANE_START_X)");
+  // advance ~2s undefended: x must increase (lateral travel) while the lane holds
+  for (let i = 0; i < 120 && e.alive; i++) GCTD.update(g, STEP);
+  assert.ok(e.alive, "the enemy survives the advance (undefended lane)");
+  assert.ok(e.x > x0 + 1, "enemy advances laterally (x increased by > 1 unit)");
+  assert.equal(e.lane, lane, "enemy stays in its lane (no z drift)");
+  // and it is still on the board (hasn't leapt past the base)
+  assert.ok(e.x <= GCTD.LANE_END_X + 0.5, "enemy is still within the lateral playfield");
+});
+
 test("a cleared wave pays the fixed bonus and returns to idle", () => {
   const g = GCTD.createGame();
   // three arrow towers, one per lane, mid-board — enough to clear wave 1

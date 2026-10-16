@@ -14,12 +14,19 @@ npm install
 ## Run the creator
 
 ```sh
-npm run dev
+npm run build
+npm run preview
 ```
 
-Vite serves the creator at <http://localhost:5173/>. The Template manifests and
-bundles under `public/templates/` are served from the same origin — that's how
-the creator loads them in dev (see [Architecture](architecture.md)).
+Vite serves the **production build** at <http://localhost:4173/>. The Template
+manifests and bundles under `public/templates/` are copied into `dist/` and
+served from the same origin — that's how the creator loads them (see
+[Architecture](architecture.md)).
+
+Build + preview rather than `npm run dev`: the [e2e suite](testing/e2e.md)
+validates this exact `dist/` artifact, so what you run locally is what the tests
+cover. (`npm run dev` still works for hot-reload iteration on the creator app
+itself.)
 
 ## Export a game from the browser
 
@@ -46,11 +53,11 @@ your title/commander.
 
 | Script | What it does |
 |---|---|
-| `npm run dev` | Vite dev server for the creator app |
 | `npm run build` | Production build of the creator into `dist/` |
+| `npm run preview` | Serve the production build at `:4173` — how to run the creator (also the e2e webServer) |
+| `npm run dev` | Vite dev server (hot reload) for working on the creator app itself |
 | `npm test` | Node unit suites: contract, export seam, gameplay rules |
 | `npm run e2e` | Playwright browser suites (Chromium; needs `npx playwright install chromium`) |
-| `npm run preview` | Serve the production build (used by the e2e webServer) |
 | `npm run vendor` | Rebuild the vendored Babylon bundle from `package.json` |
 | `npm run art` | Regenerate the Tower Defense default art (GLB/PNG/WAV) |
 

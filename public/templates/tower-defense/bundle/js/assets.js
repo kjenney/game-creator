@@ -21,9 +21,15 @@
     return BABYLON.LoadAssetContainerAsync(url, scene);
   }
   function loadTexture(path) {
-    // v9: the `url` param must stay a string (_createTextureBase calls
-    // .substring on it); the bytes go in the `buffer` param (8th positional).
-    return new BABYLON.Texture(null, scene, false, false, 0, null, null, assetBytes(path));
+    // v9 engine.createTexture decodes the `buffer` param ONLY when the url is a
+    // data: URL (`if (isDataUrl && buffer) …else _loadFile(url)`). A relative or
+    // file:// url makes it fetch the url — CORS-blocked under file:// — and a
+    // null url makes the Texture ctor early-return before the buffer is touched.
+    // So hand it a data: url (the same pattern loadModel uses) plus the raw
+    // bytes; the buffer is decoded directly, with no network fetch (D4-satisfied).
+    var bytes = assetBytes(path);
+    var url = "data:image/png;base64," + GameGC.toBase64(bytes);
+    return new BABYLON.Texture(url, scene, false, false, 0, null, null, bytes);
   }
   // v9 AssetContainer has NO getNodeByName — walk the tree (NOTES T2.4)
   function findNode(container, name) {

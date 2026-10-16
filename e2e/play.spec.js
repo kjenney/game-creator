@@ -50,16 +50,37 @@ test("play: a wave runs, a tower is placed via the UI, the economy responds", as
   await page.locator("#gc-start").click();
   await expect.poll(state, { timeout: 5000 }).toBe("wave");
 
+  // --- the enemies move LATERALLY ACROSS THE SURFACES ---
+  // 1) the surface (ground) actually covers the full lateral playfield: both
+  //    the spawn line and the base sit on it. The ground is drawn from GCTD
+  //    constants, so if it drifts off the lanes or the base this fails — the
+  //    "enemies flash around the edges" bug was a ground that stopped short.
+  const surface = await page.evaluate(() => {
+    const ground = window.__GC_SCENE.getMeshByName("ground");
+    const pos = ground.getVerticesData("position");
+    let minX = Infinity, maxX = -Infinity;
+    for (let i = 0; i < pos.length; i += 3) {
+      const wx = ground.position.x + pos[i];
+      if (wx < minX) minX = wx;
+      if (wx > maxX) maxX = wx;
+    }
+    return { minX, maxX, spawnX: window.GCTD.LANE_START_X, baseX: window.GCTD.BASE_X };
+  });
+  expect(surface.minX, "surface reaches the spawn line").toBeLessThanOrEqual(surface.spawnX);
+  expect(surface.maxX, "surface reaches the base").toBeGreaterThanOrEqual(surface.baseX);
+
+  // 2) the enemies advance laterally across that surface — x increases well
+  //    past the spawn line, into the board (not just "left the spawn point")
   await expect
     .poll(
       async () =>
         await page.evaluate(() => {
           const g = window.__GC_TD.game;
-          return g.enemies.length > 0 && Math.max(...g.enemies.map((e) => e.x)) > -1.0;
+          return g.enemies.length > 0 ? Math.max(...g.enemies.map((e) => e.x)) : -Infinity;
         }),
-      { timeout: 10_000 },
+      { timeout: 15_000 },
     )
-    .toBe(true); // at least one enemy has left the spawn point
+    .toBeGreaterThan(3.0); // an enemy has traversed well past the spawn line
 
   // --- the tower does its job (economy earn side: a bounty lands) ---
   await expect
